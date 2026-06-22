@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Planning Équipe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/fr.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f1f5f9;
+            /* slate-100 très doux */
+        }
+
+        /* Table sticky headers and columns */
+        .table-container {
+            max-height: calc(100vh - 8rem);
+        }
+
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            background-color: white;
+            z-index: 20;
+            border-right: 1px solid #e2e8f0;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.02);
+        }
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            background-color: #f8fafc;
+            z-index: 10;
+        }
+
+        .sticky-header-col {
+            position: sticky;
+            top: 0;
+            left: 0;
+            background-color: #f8fafc;
+            z-index: 30;
+            border-right: 1px solid #e2e8f0;
+        }
+
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Badges styles */
+        .badge {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.35rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+            width: 100%;
+            line-height: 1.2;
+        }
+
+        .badge-matin {
+            background-color: rgba(39, 132, 245, 0.3);
+            color: #1e40af;
+            border: 1px solid rgba(39, 132, 245, 0.4);
+        }
+
+        .badge-journee {
+            background-color: rgba(39, 221, 245, 0.3);
+            color: #0f766e;
+            border: 1px solid rgba(39, 221, 245, 0.5);
+        }
+
+        .badge-j1 {
+            background-color: rgba(39, 245, 197, 0.3);
+            color: #0f766e;
+            border: 1px solid rgba(39, 245, 197, 0.5);
+        }
+
+        .badge-j2 {
+            background-color: rgba(39, 245, 135, 0.3);
+            color: #166534;
+            border: 1px solid rgba(39, 245, 135, 0.5);
+        }
+
+        .badge-soir {
+            background-color: #334155;
+            color: #f8fafc;
+            border: 1px solid #1e293b;
+        }
+
+        .badge-repos {
+            background-color: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+        }
+
+        .badge-absent {
+            background-color: #ffedd5;
+            color: #c2410c;
+            border: 1px solid #fed7aa;
+        }
+
+        /* Toggle Switch */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #0ea5e9;
+        }
+
+        .toggle-checkbox:checked+.toggle-label {
+            background-color: #0ea5e9;
+        }
+
+        .toggle-checkbox {
+            right: 0;
+            z-index: 1;
+            border-color: #e2e8f0;
+            transition: all 0.3s;
+        }
+
+        .toggle-label {
+            background-color: #cbd5e1;
+            transition: all 0.3s;
+        }
+    </style>
+</head>
+
+<body class="text-slate-800 antialiased h-screen flex flex-col md:flex-row overflow-hidden">
+
+    <!-- Sidebar Configuration -->
+    <aside class="w-full md:w-80 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 shadow-sm z-40">
+        <div class="p-6 border-b border-slate-100 flex items-center space-x-3">
+            <div class="bg-brand-500 text-white p-2 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+            </div>
+            <h1 class="text-xl font-bold text-slate-800 tracking-tight">Planning Pro</h1>
+        </div>
+
+        <div class="p-6 flex-1 overflow-y-auto space-y-8">
+            <!-- Absences Form -->
+            <section>
+                <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Déclarer une absence</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Agent</label>
+                        <select id="agent-select"
+                            class="w-full border border-slate-300 rounded-lg shadow-sm focus:ring-brand-500 focus:border-brand-500 sm:text-sm p-2.5 bg-slate-50 text-slate-700">
+                            <option value="RICARDO">RICARDO (Senior)</option>
+                            <option value="FLORIAN">FLORIAN</option>
+                            <option value="CAMILO">CAMILO</option>
+                            <option value="GUILLAUME">GUILLAUME</option>
+                            <option value="JP">JP</option>
+                            <option value="MARIOLA">MARIOLA</option>
+                            <option value="ROBIN">ROBIN</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Période d'absence</label>
+                        <input type="text" id="absence-date-range"
+                            class="w-full border border-slate-300 rounded-lg shadow-sm focus:ring-brand-500 focus:border-brand-500 sm:text-sm p-2.5 bg-slate-50 text-slate-700"
+                            placeholder="Sélectionner les dates (ex: 12 au 18 juin)">
+                    </div>
+                    <button id="btn-add-absence"
+                        class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 focus:outline-none transition-colors border-brand-200">
+                        + Ajouter l'indisponibilité
+                    </button>
+                </div>
+
+                <!-- Absence list -->
+                <div class="mt-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs text-slate-500 font-medium">Liste des absences</span>
+                        <button id="btn-clear-absences"
+                            class="text-xs text-red-500 hover:text-red-700 transition-colors underline">Vider</button>
+                    </div>
+                    <ul id="absence-list" class="space-y-2">
+                        <!-- Absences injectées via JS -->
+                    </ul>
+                </div>
+            </section>
+
+        </div>
+
+        <div class="p-6 border-t border-slate-100 bg-slate-50">
+            <button id="btn-optimize"
+                class="w-full flex items-center justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-all">
+                <svg id="spinner" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white hidden"
+                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                </svg>
+                <span id="btn-text">Lancer l'optimisation</span>
+            </button>
+            <p id="success-msg"
+                class="text-center text-xs text-green-600 font-medium mt-3 hidden opacity-0 transition-opacity duration-300">
+                Planning généré avec succès !</p>
+        </div>
+    </aside>
+
+    <!-- Main Content Grid -->
+    <main class="flex-1 flex flex-col bg-slate-50 overflow-hidden relative">
+        <!-- Panel d'Audit -->
+        <div id="audit-panel" class="hidden bg-white border-b border-slate-200 p-6 shrink-0 shadow-sm z-10"
+            role="alert">
+            <div class="flex items-start justify-between">
+                <div class="shrink-0">
+                    <h3 class="text-lg font-bold text-slate-800 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Panel d'Audit
+                    </h3>
+                    <p class="text-sm text-slate-500 mt-1">Analyse de la qualité et du respect des contraintes du
+                        planning.</p>
+                </div>
+                
+                <!-- Tutoriel / Commandes -->
+                <div class="hidden lg:block bg-slate-50 border border-slate-100 rounded-lg p-3 text-xs text-slate-600 mx-6 shadow-sm flex-1 max-w-2xl">
+                    <div class="font-bold text-slate-700 mb-1.5 flex items-center">
+                        <svg class="w-4 h-4 mr-1.5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Commandes Interactives du Tableau
+                    </div>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                        <div class="flex flex-col gap-1">
+                            <div><span class="font-semibold text-brand-600">Clic gauche (jour) :</span> Absent / Présent</div>
+                            <div><span class="font-semibold text-brand-600">Clic droit (jour) :</span> Changer le shift</div>
+                            <div><span class="font-semibold text-brand-600">Glisser-Déposer :</span> Échanger deux shifts</div>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <div><span class="font-semibold text-brand-600">Clic molette (jour) :</span> Verrouiller le jour <span class="text-[10px] text-red-500 ml-1">🔒</span></div>
+                            <div><span class="font-semibold text-brand-600">Clic Agent (Semaine) :</span> Verrouiller sa semaine <span class="text-[10px] text-red-500 ml-1">🔒</span></div>
+                            <div><span class="font-semibold text-brand-600">Clic Icône 🔄 (Entête) :</span> Recalculer la semaine</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-right shrink-0">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Santé du planning</span>
+                    <div class="text-3xl font-extrabold" id="health-score">100%</div>
+                </div>
+            </div>
+
+            <div id="penalties-container" class="mt-4 hidden">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2 mb-3 cursor-pointer group select-none"
+                    onclick="document.getElementById('penalties-content').classList.toggle('hidden'); document.getElementById('penalties-icon').classList.toggle('rotate-180')">
+                    <h4 class="text-sm font-semibold text-slate-700 group-hover:text-brand-600 transition-colors">Points
+                        de tension identifiés</h4>
+                    <button
+                        class="text-slate-400 group-hover:text-brand-500 p-1 rounded hover:bg-slate-50 transition-colors">
+                        <svg id="penalties-icon" class="w-4 h-4 transition-transform duration-200" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+                <div id="penalties-content" class="hidden">
+                    <ul id="penalties-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <!-- Liste des pénalités -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <!-- Header -->
+        <header
+            class="bg-white px-8 py-5 border-b border-slate-200 shadow-sm z-10 flex justify-between items-center shrink-0">
+            <div>
+                <h2 class="text-xl font-bold text-slate-800">Visualisation du Planning</h2>
+                <p class="text-sm text-slate-500">Cycle de 6 semaines (42 jours)</p>
+            </div>
+            <div class="flex space-x-4 items-center">
+                <div class="flex items-center space-x-1.5"><span
+                        class="w-3 h-3 rounded-full bg-blue-200 border border-blue-300"></span><span
+                        class="text-xs text-slate-600">Matin</span></div>
+                <div class="flex items-center space-x-1.5"><span
+                        class="w-3 h-3 rounded-full bg-teal-200 border border-teal-300"></span><span
+                        class="text-xs text-slate-600">Journée</span></div>
+                <div class="flex items-center space-x-1.5"><span
+                        class="w-3 h-3 rounded-full bg-slate-600 border border-slate-700"></span><span
+                        class="text-xs text-slate-600">Soir</span></div>
+                <div class="flex items-center space-x-1.5"><span
+                        class="w-3 h-3 rounded-full bg-orange-200 border border-orange-300"></span><span
+                        class="text-xs text-slate-600">Absent</span></div>
+            </div>
+        </header>
+
+        <!-- Table Container -->
+        <div class="flex-1 overflow-auto p-6 table-container relative" id="grid-container">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden inline-block min-w-full">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead>
+                        <!-- Ligne des Semaines -->
+                        <tr class="text-sm text-slate-500 bg-slate-50">
+                            <th
+                                class="sticky-header-col p-4 border-b border-r border-slate-200 font-semibold shadow-sm w-48 min-w-[12rem] bg-white">
+                                Agent</th>
+                            <script>
+                                const startWeek = 25;
+                                for (let w = 1; w <= 6; w++) {
+                                    let borderClass = w < 6 ? 'border-r-4 border-slate-300' : 'border-r border-slate-200';
+                                    document.write(`<th colspan="8" class="sticky-header px-4 py-2 border-b ${borderClass} text-center font-semibold text-slate-600 bg-slate-50 shadow-sm">
+                                        <div class="flex items-center justify-center space-x-2">
+                                            <span>Semaine ${startWeek + w - 1}</span>
+                                            <button onclick="optimizeWeek(${w - 1})" class="p-1 text-brand-600 hover:bg-brand-100 rounded-md transition-colors" title="Recalculer uniquement cette semaine">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                            </button>
+                                        </div>
+                                    </th>`);
+                                }
+                            </script>
+                        </tr>
+                        <!-- Ligne des Jours -->
+                        <tr class="text-xs text-slate-400 bg-white">
+                            <th class="sticky-col p-2 border-b border-slate-200 shadow-sm bg-white"></th>
+                            <script>
+                                const _cycleStart = new Date(2026, 5, 15);
+                                const _today = new Date();
+                                _today.setHours(0, 0, 0, 0);
+                                const _diffDays = Math.round((_today.getTime() - _cycleStart.getTime()) / (1000 * 60 * 60 * 24));
+                                window.todayGlobalIndex = _diffDays;
+
+                                const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+                                for (let w = 1; w <= 6; w++) {
+                                    let borderClassWeek = w < 6 ? 'border-r border-slate-200' : 'border-r border-slate-200';
+                                    document.write(`<th class="px-2 py-2 border-b ${borderClassWeek} bg-slate-50 text-slate-400 font-medium text-center min-w-[40px] text-xs">Agt</th>`);
+                                    days.forEach((day, index) => {
+                                        let globalIdx = (w - 1) * 7 + index;
+                                        let isToday = (globalIdx === window.todayGlobalIndex);
+                                        let isWeekend = (index === 5 || index === 6);
+
+                                        let bgClass = isToday ? 'bg-brand-50' : (isWeekend ? 'bg-slate-50' : 'bg-white');
+                                        let textClass = isToday ? 'text-brand-700 font-bold' : (isWeekend ? 'text-slate-500 font-medium' : 'text-slate-400');
+
+                                        let borderClass = 'border-r border-slate-100';
+                                        if (index === 6) {
+                                            borderClass = w < 6 ? 'border-r-4 border-slate-300' : 'border-r border-slate-200';
+                                        }
+                                        if (isToday) {
+                                            borderClass += ' border-l border-brand-200';
+                                            if (index !== 6) borderClass += ' border-r-brand-200';
+                                        }
+
+                                        let displayDay = isToday ? `Auj.` : day;
+                                        document.write(`<th class="px-3 py-2 border-b ${borderClass} ${bgClass} ${textClass} text-center min-w-[80px]">${displayDay}</th>`);
+                                    });
+                                }
+                            </script>
+                        </tr>
+                    </thead>
+                    <tbody id="planning-body" class="text-sm">
+                        <!-- Injecté via JS -->
+                    </tbody>
+                    <tfoot>
+                        <tr id="alert-row" class="bg-red-50">
+                            <td
+                                class="sticky-col p-3 border-t border-slate-200 shadow-sm bg-red-50 font-semibold text-red-700 border-r border-red-100 flex items-center space-x-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20"
+                                    fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                                <span>Alertes Couverture</span>
+                            </td>
+                            <!-- Cellules d'alertes injectées via JS -->
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Script de l'application -->
+    <script>
+        const agents = ['RICARDO', 'FLORIAN', 'CAMILO', 'GUILLAUME', 'JP', 'MARIOLA', 'ROBIN'];
+        const shifts = {
+            'Matin': '<span class="badge badge-matin">Matin<span class="text-[9px] font-normal opacity-80 mt-0.5 tracking-tight">07h00 - 15h00</span></span>',
+            'Senior': '<span class="badge badge-journee">Journée<span class="text-[9px] font-normal opacity-80 mt-0.5 tracking-tight">09h00 - 17h00</span></span>',
+            'J1': '<span class="badge badge-j1">Journée 1<span class="text-[9px] font-normal opacity-80 mt-0.5 tracking-tight">10h00 - 18h00</span></span>',
+            'J2': '<span class="badge badge-j2">Journée 2<span class="text-[9px] font-normal opacity-80 mt-0.5 tracking-tight">11h00 - 19h00</span></span>',
+            'Soir': '<span class="badge badge-soir">Soir<span class="text-[9px] font-normal opacity-80 mt-0.5 tracking-tight">15h00 - 23h00</span></span>',
+            'Soir_Dim': '<span class="badge badge-soir">Soir Dim<span class="text-[9px] font-normal opacity-80 mt-0.5 tracking-tight">13h00 - 21h00</span></span>',
+            'REPOS': '<span class="badge badge-repos">REPOS</span>',
+            'ABSENT': '<span class="badge badge-absent">ABSENT</span>'
+        };
+
+        const tbody = document.getElementById('planning-body');
+        const alertRow = document.getElementById('alert-row');
+        let absencesData = [];
+
+        // Date de début du cycle (Semaine 25 -> 15 Juin 2026)
+        const cycleStartDate = new Date(2026, 5, 15);
+        const cycleEndDate = new Date(2026, 6, 26); // 42 jours plus tard
+
+        // Initialisation Flatpickr
+        const fp = flatpickr("#absence-date-range", {
+            mode: "range",
+            locale: "fr",
+            dateFormat: "d/m/Y",
+            minDate: cycleStartDate,
+            maxDate: cycleEndDate
+        });
+
+        // Fonction pour sauvegarder les absences dans localStorage
+        function saveAbsences() {
+            localStorage.setItem('planning_absences', JSON.stringify(absencesData));
+        }
+
+        // Chargement initial depuis le localStorage
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // Charger les absences
+            const savedAbsences = localStorage.getItem('planning_absences');
+            if (savedAbsences) {
+                try {
+                    absencesData = JSON.parse(savedAbsences);
+                    // Repeupler la liste UI
+                    absencesData.forEach((absence, index) => {
+                        renderAbsenceItem(absence, index);
+                    });
+                } catch (e) {
+                    console.error('Erreur parsing absences', e);
+                    absencesData = [];
+                }
+            }
+
+            // Restaurer le dernier planning généré
+            const savedPlanning = localStorage.getItem('planning_last_result');
+            if (savedPlanning) {
+                try {
+                    const data = JSON.parse(savedPlanning);
+                    if (data && data.grid) {
+                        displayPlanningData(data);
+                    }
+                } catch (e) {
+                    console.error('Erreur parsing planning_last_result', e);
+                }
+            }
+        });
+
+        function renderAbsenceItem(absenceGroup, index) {
+            const li = document.createElement('li');
+            li.className = "flex items-center justify-between text-sm bg-white border border-slate-200 p-2.5 rounded-lg shadow-sm";
+
+            // Format d'affichage pour les nouveaux groupes ou les anciens éléments isolés
+            let displayString = '';
+            if (absenceGroup.rangeText) {
+                displayString = absenceGroup.rangeText;
+            } else {
+                displayString = `S${24 + parseInt(absenceGroup.week)} ${absenceGroup.dayStr}`;
+            }
+
+            li.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <span class="w-2 h-2 rounded-full bg-orange-400"></span>
+                    <span class="font-medium text-slate-700">${absenceGroup.agent}</span>
+                    <span class="text-slate-400 text-xs px-1">—</span>
+                    <span class="text-slate-600">${displayString}</span>
+                </div>
+                <button class="text-slate-400 hover:text-red-500 transition-colors" onclick="removeAbsence(${index})">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            `;
+            document.getElementById('absence-list').appendChild(li);
+        }
+
+        window.removeAbsence = function (index) {
+            absencesData.splice(index, 1);
+            saveAbsences();
+            // Re-render whole list to keep indices correct
+            document.getElementById('absence-list').innerHTML = '';
+            absencesData.forEach((absence, idx) => {
+                renderAbsenceItem(absence, idx);
+            });
+        };
+
+        window.lockedShifts = {};
+
+        function saveLockedShifts() {
+            localStorage.setItem('planning_locked_shifts', JSON.stringify(window.lockedShifts));
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedLocked = localStorage.getItem('planning_locked_shifts');
+            if (savedLocked) {
+                try {
+                    window.lockedShifts = JSON.parse(savedLocked);
+                } catch (e) { }
+            }
+        });
+
+        window.toggleLock = function (agent, dayIndex) {
+            if (!window.lockedShifts[agent]) window.lockedShifts[agent] = {};
+
+            if (window.lockedShifts[agent][dayIndex]) {
+                delete window.lockedShifts[agent][dayIndex];
+            } else {
+                const savedPlanning = localStorage.getItem('planning_last_result');
+                if (savedPlanning) {
+                    try {
+                        const data = JSON.parse(savedPlanning);
+                        if (data && data.grid && data.grid[agent]) {
+                            window.lockedShifts[agent][dayIndex] = data.grid[agent][dayIndex];
+                        }
+                    } catch (e) { }
+                }
+            }
+            saveLockedShifts();
+
+            const savedPlanning = localStorage.getItem('planning_last_result');
+            if (savedPlanning) {
+                try {
+                    const data = JSON.parse(savedPlanning);
+                    if (data && data.grid) displayPlanningData(data);
+                } catch (e) { }
+            }
+        };
+
+        window.toggleAgentWeekLock = function (agent, startDayIndex) {
+            const savedPlanning = localStorage.getItem('planning_last_result');
+            if (!savedPlanning) return;
+
+            let data;
+            try {
+                data = JSON.parse(savedPlanning);
+            } catch (e) { return; }
+
+            if (!data.grid || !data.grid[agent]) return;
+
+            if (!window.lockedShifts[agent]) window.lockedShifts[agent] = {};
+
+            let allLocked = true;
+            for (let d = 0; d < 7; d++) {
+                if (!window.lockedShifts[agent][startDayIndex + d]) {
+                    allLocked = false;
+                    break;
+                }
+            }
+
+            if (allLocked) {
+                for (let d = 0; d < 7; d++) {
+                    delete window.lockedShifts[agent][startDayIndex + d];
+                }
+            } else {
+                for (let d = 0; d < 7; d++) {
+                    window.lockedShifts[agent][startDayIndex + d] = data.grid[agent][startDayIndex + d];
+                }
+            }
+
+            saveLockedShifts();
+            displayPlanningData(data);
+        };
+
+        function isAbsent(agent, dayIndex) {
+            for (let i = 0; i < absencesData.length; i++) {
+                let group = absencesData[i];
+                if (group.items) {
+                    for (let j = 0; j < group.items.length; j++) {
+                        let item = group.items[j];
+                        if (item.agent === agent && item.dayIndex === dayIndex) return { groupIdx: i, itemIdx: j };
+                    }
+                } else {
+                    if (group.agent === agent && group.dayIndex === dayIndex) return { groupIdx: i, itemIdx: -1 };
+                }
+            }
+            return null;
+        }
+
+        function removeAbsenceByAgentDay(agent, dayIndex) {
+            let info = isAbsent(agent, dayIndex);
+            if (info) {
+                if (info.itemIdx !== -1) {
+                    absencesData[info.groupIdx].items.splice(info.itemIdx, 1);
+                    if (absencesData[info.groupIdx].items.length === 0) {
+                        absencesData.splice(info.groupIdx, 1);
+                    }
+                } else {
+                    absencesData.splice(info.groupIdx, 1);
+                }
+            }
+        }
+
+        function addAbsenceRaw(agent, dayIndex, replacedShift = 'REPOS') {
+            const week = Math.floor(dayIndex / 7) + 1;
+            const dayMapToCycle = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+            let d = new Date(cycleStartDate);
+            d.setDate(d.getDate() + dayIndex);
+            let dayStr = dayMapToCycle[d.getDay()];
+
+            absencesData.push({
+                agent: agent,
+                week: week,
+                dayStr: dayStr,
+                dayIndex: dayIndex,
+                replacedShift: replacedShift
+            });
+        }
+
+        window.swapShifts = function (agentA, dayA, agentB, dayB) {
+            if (agentA === agentB && dayA === dayB) return;
+
+            const savedPlanning = localStorage.getItem('planning_last_result');
+            if (!savedPlanning) return;
+
+            let data;
+            try {
+                data = JSON.parse(savedPlanning);
+            } catch (e) { return; }
+
+            if (!data.grid || !data.grid[agentA] || !data.grid[agentB]) return;
+
+            let shiftA = data.grid[agentA][dayA];
+            let shiftB = data.grid[agentB][dayB];
+            data.grid[agentA][dayA] = shiftB;
+            data.grid[agentB][dayB] = shiftA;
+
+            let lockA = window.lockedShifts[agentA] ? window.lockedShifts[agentA][dayA] : undefined;
+            let lockB = window.lockedShifts[agentB] ? window.lockedShifts[agentB][dayB] : undefined;
+
+            if (lockA) {
+                if (!window.lockedShifts[agentB]) window.lockedShifts[agentB] = {};
+                window.lockedShifts[agentB][dayB] = shiftA;
+            } else {
+                if (window.lockedShifts[agentB]) delete window.lockedShifts[agentB][dayB];
+            }
+
+            if (lockB) {
+                if (!window.lockedShifts[agentA]) window.lockedShifts[agentA] = {};
+                window.lockedShifts[agentA][dayA] = shiftB;
+            } else {
+                if (window.lockedShifts[agentA]) delete window.lockedShifts[agentA][dayA];
+            }
+            saveLockedShifts();
+
+            let wasAbsentA = isAbsent(agentA, dayA) !== null;
+            let wasAbsentB = isAbsent(agentB, dayB) !== null;
+
+            if (wasAbsentA) removeAbsenceByAgentDay(agentA, dayA);
+            if (wasAbsentB) removeAbsenceByAgentDay(agentB, dayB);
+
+            if (wasAbsentA) addAbsenceRaw(agentB, dayB);
+            if (wasAbsentB) addAbsenceRaw(agentA, dayA);
+
+            saveAbsences();
+
+            document.getElementById('absence-list').innerHTML = '';
+            absencesData.forEach((absence, idx) => {
+                renderAbsenceItem(absence, idx);
+            });
+
+            localStorage.setItem('planning_last_result', JSON.stringify(data));
+            displayPlanningData(data);
+        };
+
+        window.cycleShift = function (agent, dayIndex) {
+            let shiftOrder;
+            if (dayIndex % 7 === 6) { // Dimanche
+                shiftOrder = ['Matin', 'Senior', 'J1', 'J2', 'Soir_Dim', 'REPOS'];
+            } else {
+                shiftOrder = ['Matin', 'Senior', 'J1', 'J2', 'Soir', 'REPOS'];
+            }
+            const savedPlanning = localStorage.getItem('planning_last_result');
+            if (savedPlanning) {
+                try {
+                    const data = JSON.parse(savedPlanning);
+                    if (data && data.grid && data.grid[agent]) {
+                        let current = data.grid[agent][dayIndex];
+                        let idx = shiftOrder.indexOf(current);
+                        if (idx === -1) idx = 6;
+                        let next = shiftOrder[(idx + 1) % shiftOrder.length];
+
+                        data.grid[agent][dayIndex] = next;
+                        localStorage.setItem('planning_last_result', JSON.stringify(data));
+
+                        // Si le shift était déjà verrouillé, on met à jour le verrou avec la nouvelle valeur
+                        if (window.lockedShifts[agent] && window.lockedShifts[agent][dayIndex]) {
+                            window.lockedShifts[agent][dayIndex] = next;
+                            saveLockedShifts();
+                        }
+
+                        displayPlanningData(data);
+                    }
+                } catch (e) { }
+            }
+        };
+
+        window.toggleAbsence = function (agent, dayIndex) {
+            let existingInfo = isAbsent(agent, dayIndex);
+
+            const savedPlanning = localStorage.getItem('planning_last_result');
+            let data = null;
+            let currentShift = 'REPOS';
+            if (savedPlanning) {
+                try {
+                    data = JSON.parse(savedPlanning);
+                    if (data && data.grid && data.grid[agent]) {
+                        currentShift = data.grid[agent][dayIndex];
+                    }
+                } catch (e) { }
+            }
+
+            let restoredShift = 'REPOS';
+
+            if (existingInfo) {
+                let absenceItem;
+                if (existingInfo.itemIdx !== -1) {
+                    absenceItem = absencesData[existingInfo.groupIdx].items[existingInfo.itemIdx];
+                } else {
+                    absenceItem = absencesData[existingInfo.groupIdx];
+                }
+                restoredShift = absenceItem.replacedShift || 'REPOS';
+                if (restoredShift === 'ABSENT') restoredShift = 'REPOS';
+
+                removeAbsenceByAgentDay(agent, dayIndex);
+            } else {
+                addAbsenceRaw(agent, dayIndex, currentShift);
+            }
+
+            saveAbsences();
+            document.getElementById('absence-list').innerHTML = '';
+            absencesData.forEach((absence, idx) => {
+                renderAbsenceItem(absence, idx);
+            });
+
+            if (data && data.grid) {
+                if (!existingInfo) {
+                    data.grid[agent][dayIndex] = 'ABSENT';
+                } else {
+                    data.grid[agent][dayIndex] = restoredShift;
+                }
+                localStorage.setItem('planning_last_result', JSON.stringify(data));
+                displayPlanningData(data);
+            }
+        };
+
+        // Rendu du tableau à partir de la réponse API
+        function renderTable(grid, alerts, penalties_details) {
+            tbody.innerHTML = '';
+
+            // Map des jours avec pénalités
+            const dayPenalties = {};
+            const daysWithPenalties = new Set();
+            if (penalties_details) {
+                penalties_details.forEach(p => {
+                    daysWithPenalties.add(p.day_index);
+                    if (!dayPenalties[p.day_index]) dayPenalties[p.day_index] = [];
+                    dayPenalties[p.day_index].push(p.message);
+                });
+            }
+
+            // Effacer et recréer les cellules d'alerte
+            const oldAlerts = alertRow.querySelectorAll('.alert-cell');
+            oldAlerts.forEach(el => el.remove());
+
+            agents.forEach(agent => {
+                let tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-100";
+
+                // Colonne fixe Agent
+                let tdName = document.createElement('td');
+                tdName.className = "sticky-col p-3 font-medium text-slate-700 bg-white group-hover:bg-slate-50 border-r border-slate-200 z-10 transition-colors";
+                tdName.innerHTML = `<div class="flex items-center space-x-2">
+                    <div class="w-6 h-6 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center text-xs font-bold">${agent.charAt(0)}</div>
+                    <span>${agent}</span>
+                </div>`;
+                tr.appendChild(tdName);
+
+                let seq = grid[agent] || [];
+
+                // Générer les 42 cellules
+                for (let i = 0; i < 42; i++) {
+                    if (i % 7 === 0) {
+                        let isWeekLocked = true;
+                        for (let d = 0; d < 7; d++) {
+                            if (!window.lockedShifts[agent] || !window.lockedShifts[agent][i + d]) {
+                                isWeekLocked = false;
+                                break;
+                            }
+                        }
+
+                        let tdAgentWeek = document.createElement('td');
+                        tdAgentWeek.className = "alert-cell p-1 border-r border-slate-200 bg-slate-50/50 text-slate-500 font-medium text-[10px] text-center align-middle cursor-pointer hover:bg-slate-100 transition-colors group";
+
+                        let lockColor = isWeekLocked ? 'text-red-500' : 'text-slate-300 group-hover:text-slate-400';
+                        tdAgentWeek.innerHTML = `
+                            <div class="flex flex-col items-center justify-center space-y-0.5">
+                                <span>${agent.substring(0, 3)}.</span>
+                                <svg class="w-3 h-3 ${lockColor}" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
+                        `;
+                        tdAgentWeek.onclick = () => toggleAgentWeekLock(agent, i);
+                        tr.appendChild(tdAgentWeek);
+                    }
+
+                    let td = document.createElement('td');
+                    let isSunday = (i % 7 === 6);
+                    let hasPenalty = daysWithPenalties.has(i);
+                    let isToday = (i === window.todayGlobalIndex);
+
+                    let borderClass = 'border-r border-slate-100';
+                    if (isSunday) {
+                        borderClass = i < 41 ? 'border-r-4 border-slate-300' : 'border-r border-slate-200';
+                    }
+                    if (isToday) {
+                        borderClass += ' border-l border-brand-200';
+                        if (!isSunday) borderClass += ' border-r-brand-200';
+                    }
+
+                    let bgClass = isSunday ? 'bg-slate-50/50' : '';
+                    if (isToday) bgClass = 'bg-brand-50/30';
+                    if (hasPenalty) bgClass += ' bg-red-50/30';
+
+                    td.className = `p-2 ${borderClass} ${bgClass} text-center transition-colors relative cursor-pointer hover:bg-slate-100 hover:brightness-95 select-none`;
+                    td.draggable = true;
+
+                    let shiftType = seq[i] || 'REPOS';
+                    let badgeHtml = shifts[shiftType] || shiftType;
+                    let isLocked = window.lockedShifts && window.lockedShifts[agent] && window.lockedShifts[agent][i];
+
+                    td.innerHTML = badgeHtml;
+                    if (isLocked) {
+                        td.innerHTML += `<div class="absolute bottom-0 right-0 p-0.5 pointer-events-none"><svg class="w-2.5 h-2.5 text-red-500 drop-shadow-sm" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg></div>`;
+                    }
+
+                    td.onclick = (e) => {
+                        toggleAbsence(agent, i);
+                    };
+                    td.oncontextmenu = (e) => {
+                        e.preventDefault();
+                        cycleShift(agent, i);
+                    };
+                    td.onauxclick = (e) => {
+                        if (e.button === 1) {
+                            e.preventDefault();
+                            toggleLock(agent, i);
+                        }
+                    };
+                    td.onmousedown = (e) => {
+                        if (e.button === 1) {
+                            e.preventDefault();
+                        }
+                    };
+
+                    td.ondragstart = (e) => {
+                        e.dataTransfer.setData('text/plain', JSON.stringify({ agent: agent, dayIndex: i }));
+                        e.currentTarget.classList.add('opacity-50');
+                    };
+                    td.ondragend = (e) => {
+                        e.currentTarget.classList.remove('opacity-50');
+                    };
+                    td.ondragover = (e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.add('bg-brand-100');
+                    };
+                    td.ondragleave = (e) => {
+                        e.currentTarget.classList.remove('bg-brand-100');
+                    };
+                    td.ondrop = (e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.remove('bg-brand-100');
+                        try {
+                            const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                            const srcDay = data.dayIndex;
+                            const dstDay = i;
+                            if ((srcDay % 7 === 6) !== (dstDay % 7 === 6)) {
+                                alert("Impossible d'échanger un shift du dimanche avec un jour de la semaine.");
+                                return;
+                            }
+                            swapShifts(data.agent, data.dayIndex, agent, i);
+                        } catch (err) {
+                            console.error(err);
+                        }
+                    };
+
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            });
+
+            // Générer les alertes
+            for (let i = 0; i < 42; i++) {
+                if (i % 7 === 0) {
+                    let tdAgt = document.createElement('td');
+                    tdAgt.className = "alert-cell p-2 border-r border-slate-200 bg-red-50 border-t border-slate-200";
+                    alertRow.appendChild(tdAgt);
+                }
+                let td = document.createElement('td');
+                let isSunday = (i % 7 === 6);
+                let hasPenalty = daysWithPenalties.has(i);
+                let isToday = (i === window.todayGlobalIndex);
+
+                let borderClass = 'border-r border-slate-100';
+                if (isSunday) {
+                    borderClass = i < 41 ? 'border-r-4 border-slate-300' : 'border-r border-slate-200';
+                }
+                if (isToday) {
+                    borderClass += ' border-l border-brand-200';
+                    if (!isSunday) borderClass += ' border-r-brand-200';
+                }
+
+                let bgClass = isToday ? 'bg-brand-50/30' : '';
+                if (hasPenalty) bgClass += ' bg-red-50';
+
+                td.className = `p-2 ${borderClass} ${bgClass} text-center alert-cell border-t border-slate-200`;
+
+                if (alerts && alerts[i]) {
+                    td.innerHTML = `<span class="text-xs font-bold text-red-600 bg-white px-2 py-1 rounded border border-red-200 shadow-sm inline-flex items-center"><span class="w-2 h-2 rounded-full bg-red-500 mr-1 animate-pulse"></span>${alerts[i]}</span>`;
+                } else if (hasPenalty) {
+                    let tooltipList = dayPenalties[i].map(msg => `<li class="mb-1">${msg}</li>`).join('');
+                    td.innerHTML = `
+                        <div class="relative group inline-block">
+                            <span class="text-lg opacity-70 cursor-help">⚠️</span>
+                            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-50 w-64 p-2.5 bg-slate-800 text-white text-xs rounded-lg shadow-xl border border-slate-700 pointer-events-none whitespace-normal">
+                                <ul class="list-disc pl-4 text-left text-[11px] leading-relaxed">
+                                    ${tooltipList}
+                                </ul>
+                                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-slate-800"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+                alertRow.appendChild(td);
+            }
+        }
+
+        function displayPlanningData(data) {
+            renderTable(data.grid, data.alerts, data.penalties_details);
+
+            const auditPanel = document.getElementById('audit-panel');
+            if (auditPanel) {
+                auditPanel.classList.remove('hidden');
+                const healthScore = document.getElementById('health-score');
+                const penaltiesContainer = document.getElementById('penalties-container');
+                const penaltiesList = document.getElementById('penalties-list');
+
+                const score = data.health_score !== undefined ? data.health_score : 100;
+                healthScore.innerText = `${score}%`;
+                healthScore.className = `text-3xl font-extrabold ${score >= 95 ? 'text-green-600' : (score >= 80 ? 'text-orange-500' : 'text-red-600')}`;
+
+                if (data.penalties_details && data.penalties_details.length > 0) {
+                    penaltiesContainer.classList.remove('hidden');
+                    penaltiesList.innerHTML = '';
+                    data.penalties_details.forEach(p => {
+                        let li = document.createElement('li');
+                        let colorClass = p.gravity === 'Critique' ? 'text-red-700 bg-red-50 border-red-200' : 'text-orange-700 bg-orange-50 border-orange-200';
+                        let icon = p.gravity === 'Critique' ? '🔴' : '🟠';
+                        li.className = `flex items-center p-2.5 rounded-lg border text-xs font-medium shadow-sm ${colorClass}`;
+                        li.innerHTML = `<span class="mr-2 text-base">${icon}</span> ${p.message}`;
+                        penaltiesList.appendChild(li);
+                    });
+                } else {
+                    penaltiesContainer.classList.add('hidden');
+                    penaltiesList.innerHTML = '';
+                }
+            }
+        }
+
+        // Action : Ajouter Indisponibilité
+        document.getElementById('btn-add-absence').addEventListener('click', () => {
+            const agent = document.getElementById('agent-select').value;
+            const selectedDates = fp.selectedDates;
+
+            if (!selectedDates || selectedDates.length === 0) {
+                alert("Veuillez sélectionner une ou plusieurs dates.");
+                return;
+            }
+
+            const startDate = selectedDates[0];
+            const endDate = selectedDates.length > 1 ? selectedDates[1] : selectedDates[0];
+
+            const formatter = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' });
+            let rangeText = '';
+            if (startDate.getTime() === endDate.getTime()) {
+                rangeText = formatter.format(startDate);
+            } else {
+                rangeText = `du ${formatter.format(startDate)} au ${formatter.format(endDate)}`;
+            }
+
+            const dayMapToCycle = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']; // js getDay: 0=Dim, 1=Lun
+            const items = [];
+
+            // Parcourir chaque jour de la plage
+            let currentDate = new Date(startDate);
+            currentDate.setHours(0, 0, 0, 0);
+            const endDateTime = new Date(endDate);
+            endDateTime.setHours(0, 0, 0, 0);
+
+            while (currentDate <= endDateTime) {
+                const diffTime = currentDate.getTime() - cycleStartDate.getTime();
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays >= 0 && diffDays < 42) {
+                    const week = Math.floor(diffDays / 7) + 1;
+                    let jsDay = currentDate.getDay(); // 0 (Sun) to 6 (Sat)
+                    let dayStr = dayMapToCycle[jsDay];
+
+                    items.push({
+                        agent: agent,
+                        week: week,
+                        dayStr: dayStr,
+                        dayIndex: diffDays
+                    });
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            if (items.length > 0) {
+                const newGroup = {
+                    agent: agent,
+                    rangeText: rangeText,
+                    items: items
+                };
+                absencesData.push(newGroup);
+                saveAbsences();
+                renderAbsenceItem(newGroup, absencesData.length - 1);
+                fp.clear(); // Réinitialiser le calendrier après ajout
+            } else {
+                alert("Les dates sélectionnées sont en dehors du cycle de 42 jours.");
+            }
+        });
+
+        // Action : Vider les absences
+        document.getElementById('btn-clear-absences').addEventListener('click', () => {
+            absencesData = [];
+            saveAbsences();
+            document.getElementById('absence-list').innerHTML = '';
+        });
+
+        window.optimizeWeek = async function (targetWeek) {
+            const btn = document.getElementById('btn-optimize');
+            const spinner = document.getElementById('spinner');
+            const btnText = document.getElementById('btn-text');
+            const msg = document.getElementById('success-msg');
+
+            btn.disabled = true;
+            btn.classList.add('opacity-80', 'cursor-not-allowed');
+            spinner.classList.remove('hidden');
+            btnText.innerText = "Calcul (S" + (25 + targetWeek) + ")...";
+            msg.classList.add('hidden', 'opacity-0');
+            msg.classList.remove('text-red-600', 'text-orange-600', 'text-green-600');
+
+            let previousGrid = null;
+            const savedPlanning = localStorage.getItem('planning_last_result');
+            if (savedPlanning) {
+                try {
+                    const data = JSON.parse(savedPlanning);
+                    if (data && data.grid) {
+                        previousGrid = data.grid;
+                    }
+                } catch (e) { }
+            }
+
+            if (!previousGrid) {
+                alert("Aucun planning précédent trouvé. Veuillez d'abord générer le planning complet.");
+                btn.disabled = false;
+                btn.classList.remove('opacity-80', 'cursor-not-allowed');
+                spinner.classList.add('hidden');
+                btnText.innerText = "Lancer l'optimisation";
+                return;
+            }
+
+            const rules = {};
+
+            try {
+                const flatAbsences = [];
+                absencesData.forEach(group => {
+                    if (group.items) {
+                        flatAbsences.push(...group.items);
+                    } else {
+                        flatAbsences.push(group);
+                    }
+                });
+
+                const response = await fetch('/api/generer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        absences: flatAbsences,
+                        rules: rules,
+                        target_week: targetWeek,
+                        previous_grid: previousGrid,
+                        locked_shifts: window.lockedShifts || {}
+                    })
+                });
+
+                if (!response.ok) throw new Error("Erreur HTTP " + response.status);
+
+                const data = await response.json();
+
+                const auditPanel = document.getElementById('audit-panel');
+                if (data.status === 'INFEASIBLE') {
+                    if (auditPanel) auditPanel.classList.add('hidden');
+                    msg.innerText = "Aucune solution trouvée pour cette semaine. (INFEASIBLE)";
+                    msg.classList.add('text-orange-600', 'font-bold');
+                } else {
+                    displayPlanningData(data);
+                    localStorage.setItem('planning_last_result', JSON.stringify(data));
+                    msg.innerText = "Semaine " + (25 + targetWeek) + " générée avec succès !";
+                    msg.classList.add('text-green-600');
+                }
+            } catch (err) {
+                msg.innerText = `Erreur API: ${err.message}`;
+                msg.classList.add('text-red-600');
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-80', 'cursor-not-allowed');
+                spinner.classList.add('hidden');
+                btnText.innerText = "Lancer l'optimisation";
+                msg.classList.remove('hidden');
+                setTimeout(() => msg.classList.remove('opacity-0'), 50);
+            }
+        };
+
+        // Action : Lancer l'optimisation
+        document.getElementById('btn-optimize').addEventListener('click', async function () {
+            const btn = this;
+            const spinner = document.getElementById('spinner');
+            const btnText = document.getElementById('btn-text');
+            const msg = document.getElementById('success-msg');
+
+            // Start Loading
+            btn.disabled = true;
+            btn.classList.add('opacity-80', 'cursor-not-allowed');
+            spinner.classList.remove('hidden');
+            btnText.innerText = "Calcul en cours...";
+            msg.classList.add('hidden', 'opacity-0');
+            msg.classList.remove('text-red-600', 'text-orange-600', 'text-green-600'); // Reset colors
+
+            const rules = {};
+
+            try {
+                // Aplatir les absences pour le backend
+                const flatAbsences = [];
+                absencesData.forEach(group => {
+                    if (group.items) {
+                        flatAbsences.push(...group.items);
+                    } else {
+                        flatAbsences.push(group); // compatibilité ancien format
+                    }
+                });
+
+                const response = await fetch('/api/generer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        absences: flatAbsences,
+                        rules: rules,
+                        locked_shifts: window.lockedShifts || {}
+                    })
+                });
+
+                if (!response.ok) {
+                    let errDetails = "";
+                    try {
+                        const errData = await response.json();
+                        errDetails = JSON.stringify(errData);
+                    } catch (e) {
+                        errDetails = response.statusText;
+                    }
+                    throw new Error(`Erreur HTTP ${response.status}: ${errDetails}`);
+                }
+
+                const data = await response.json();
+
+                const auditPanel = document.getElementById('audit-panel');
+                if (data.status === 'INFEASIBLE') {
+                    if (auditPanel) auditPanel.classList.add('hidden');
+                    msg.innerText = "Aucune solution trouvée (INFEASIBLE). Vérifiez les contraintes.";
+                    msg.classList.add('text-orange-600', 'font-bold');
+                } else {
+                    displayPlanningData(data);
+                    // Sauvegarde pour le rechargement de page
+                    localStorage.setItem('planning_last_result', JSON.stringify(data));
+
+                    msg.innerText = "Planning généré avec succès !";
+                    msg.classList.add('text-green-600');
+                }
+            } catch (err) {
+                console.error("Erreur complète :", err);
+                // Afficher l'erreur réelle dans l'UI
+                msg.innerText = `Erreur API: ${err.message}`;
+                msg.classList.add('text-red-600');
+            } finally {
+                // Reset Button
+                btn.disabled = false;
+                btn.classList.remove('opacity-80', 'cursor-not-allowed');
+                spinner.classList.add('hidden');
+                btnText.innerText = "Lancer l'optimisation";
+
+                // Show Message
+                msg.classList.remove('hidden');
+                setTimeout(() => msg.classList.remove('opacity-0'), 50);
+            }
+        });
+
+        // Fonctionnalité : Défilement horizontal avec la molette de la souris
+        const gridContainer = document.getElementById('grid-container');
+        if (gridContainer) {
+            gridContainer.addEventListener('wheel', function (e) {
+                // Si le défilement est déjà horizontal (ex: trackpad), on ne fait rien
+                if (e.deltaX !== 0) return;
+
+                // Si on utilise la molette verticale standard sans Majuscule
+                if (!e.shiftKey) {
+                    e.preventDefault();
+                    this.scrollLeft += e.deltaY;
+                }
+            }, { passive: false });
+        }
+    </script>
+</body>
+
+</html>
