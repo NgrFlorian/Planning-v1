@@ -163,6 +163,11 @@
             background-color: #cbd5e1;
             transition: all 0.3s;
         }
+
+        /* Archiving finished weeks */
+        .hide-archived .archived-week {
+            display: none !important;
+        }
     </style>
 </head>
 
@@ -190,13 +195,17 @@
                         <label class="block text-sm font-medium text-slate-700 mb-1">Agent</label>
                         <select id="agent-select"
                             class="w-full border border-slate-300 rounded-lg shadow-sm focus:ring-brand-500 focus:border-brand-500 sm:text-sm p-2.5 bg-slate-50 text-slate-700">
-                            <option value="RICARDO">RICARDO (Senior)</option>
-                            <option value="FLORIAN">FLORIAN</option>
-                            <option value="CAMILO">CAMILO</option>
-                            <option value="GUILLAUME">GUILLAUME</option>
-                            <option value="JP">JP</option>
-                            <option value="MARIOLA">MARIOLA</option>
-                            <option value="ROBIN">ROBIN</option>
+                            <!-- Dynamically populated -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Type d'absence</label>
+                        <select id="absence-type" class="w-full border border-slate-300 rounded-lg shadow-sm focus:ring-brand-500 focus:border-brand-500 sm:text-sm p-2.5 bg-slate-50 text-slate-700">
+                            <option value="ABSENT_CP">Congé Payé (CP)</option>
+                            <option value="ABSENT_RTT">RTT</option>
+                            <option value="ABSENT_MALADIE">Maladie</option>
+                            <option value="ABSENT_FORMATION">Formation</option>
+                            <option value="ABSENT">Autre</option>
                         </select>
                     </div>
                     <div>
@@ -224,6 +233,44 @@
                 </div>
             </section>
 
+            <!-- Historique & Comparaison -->
+            <section id="diff-panel-section" class="hidden border-t border-slate-100 pt-6">
+                <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Historique & Diff</h2>
+                <div class="space-y-4">
+                    <!-- Toggle Diff Visuel -->
+                    <div class="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <span class="text-xs font-medium text-slate-700">Diff visuel (Rouge/Vert)</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggle-diff-mode" class="sr-only peer" onchange="toggleDiffMode(this.checked)">
+                            <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
+                        </label>
+                    </div>
+
+                    <!-- Liste des modifs -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 max-h-48 overflow-y-auto">
+                        <div class="text-xs text-slate-500 font-semibold mb-2 flex justify-between items-center">
+                            <span>Modifications</span>
+                            <span id="diff-changes-count" class="bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded-full text-[10px]">0</span>
+                        </div>
+                        <ul id="diff-changes-list" class="space-y-1.5 text-[11px] text-slate-600">
+                            <!-- Rempli par JS -->
+                        </ul>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex space-x-2">
+                        <button onclick="restorePreviousGrid()"
+                            class="flex-1 py-2 px-3 border border-slate-300 rounded-lg text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none transition-colors">
+                            Restaurer
+                        </button>
+                        <button onclick="acceptNewGrid()"
+                            class="flex-1 py-2 px-3 border border-transparent rounded-lg text-xs font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none transition-colors">
+                            Accepter
+                        </button>
+                    </div>
+                </div>
+            </section>
+
         </div>
 
         <div class="p-6 border-t border-slate-100 bg-slate-50">
@@ -237,6 +284,10 @@
                     </path>
                 </svg>
                 <span id="btn-text">Lancer l'optimisation</span>
+            </button>
+            <button id="btn-publish" onclick="togglePublishState()"
+                class="w-full flex items-center justify-center py-3 px-4 mt-3 border border-slate-200 rounded-lg shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none transition-all hidden">
+                <span id="btn-publish-text">Publier le planning</span>
             </button>
             <p id="success-msg"
                 class="text-center text-xs text-green-600 font-medium mt-3 hidden opacity-0 transition-opacity duration-300">
@@ -311,90 +362,60 @@
                 </div>
             </div>
         </div>
+        <!-- Published Banner -->
+        <div id="published-banner" class="hidden bg-green-500 text-white text-center py-2 text-sm font-bold shadow-sm z-50 sticky top-0 flex justify-center items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Ce planning est actuellement PUBLIÉ. L'optimisation est désactivée en mode public.
+        </div>
         <!-- Header -->
         <header
             class="bg-white px-8 py-5 border-b border-slate-200 shadow-sm z-10 flex justify-between items-center shrink-0">
-            <div>
-                <h2 class="text-xl font-bold text-slate-800">Visualisation du Planning</h2>
-                <p class="text-sm text-slate-500">Cycle de 6 semaines (42 jours)</p>
+            <div class="flex items-center space-x-8">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">Visualisation du Planning</h2>
+                    <p id="cycle-description" class="text-sm text-slate-500">Cycle de 6 semaines (42 jours)</p>
+                </div>
             </div>
-            <div class="flex space-x-4 items-center">
-                <div class="flex items-center space-x-1.5"><span
-                        class="w-3 h-3 rounded-full bg-blue-200 border border-blue-300"></span><span
-                        class="text-xs text-slate-600">Matin</span></div>
-                <div class="flex items-center space-x-1.5"><span
-                        class="w-3 h-3 rounded-full bg-teal-200 border border-teal-300"></span><span
-                        class="text-xs text-slate-600">Journée</span></div>
-                <div class="flex items-center space-x-1.5"><span
-                        class="w-3 h-3 rounded-full bg-slate-600 border border-slate-700"></span><span
-                        class="text-xs text-slate-600">Soir</span></div>
-                <div class="flex items-center space-x-1.5"><span
-                        class="w-3 h-3 rounded-full bg-orange-200 border border-orange-300"></span><span
-                        class="text-xs text-slate-600">Absent</span></div>
+            <div class="flex items-center space-x-6">
+                <!-- Toggle Masquer les semaines passées -->
+                <div class="flex items-center space-x-2 bg-slate-50 p-2 rounded-lg border border-slate-200">
+                    <span class="text-xs font-semibold text-slate-700">Masquer les semaines passées</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="toggle-archive" class="sr-only peer" checked onchange="toggleArchiveMode(this.checked)">
+                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
+                    </label>
+                </div>
+                <div class="flex space-x-4 items-center">
+                    <div class="flex items-center space-x-1.5"><span
+                            class="w-3 h-3 rounded-full bg-blue-200 border border-blue-300"></span><span
+                            class="text-xs text-slate-600">Matin</span></div>
+                    <div class="flex items-center space-x-1.5"><span
+                            class="w-3 h-3 rounded-full bg-teal-200 border border-teal-300"></span><span
+                            class="text-xs text-slate-600">Journée</span></div>
+                    <div class="flex items-center space-x-1.5"><span
+                            class="w-3 h-3 rounded-full bg-slate-600 border border-slate-700"></span><span
+                            class="text-xs text-slate-600">Soir</span></div>
+                    <div class="flex items-center space-x-1.5"><span
+                            class="w-3 h-3 rounded-full bg-orange-200 border border-orange-300"></span><span
+                            class="text-xs text-slate-600">Absent</span></div>
+                </div>
             </div>
         </header>
 
         <!-- Table Container -->
-        <div class="flex-1 overflow-auto p-6 table-container relative" id="grid-container">
+        <div class="flex-1 overflow-auto p-6 table-container relative hide-archived" id="grid-container">
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden inline-block min-w-full">
                 <table class="w-full text-left border-collapse whitespace-nowrap">
                     <thead>
                         <!-- Ligne des Semaines -->
-                        <tr class="text-sm text-slate-500 bg-slate-50">
+                        <tr id="header-weeks-row" class="text-sm text-slate-500 bg-slate-50">
                             <th
                                 class="sticky-header-col p-4 border-b border-r border-slate-200 font-semibold shadow-sm w-48 min-w-[12rem] bg-white">
                                 Agent</th>
-                            <script>
-                                const startWeek = 25;
-                                for (let w = 1; w <= 6; w++) {
-                                    let borderClass = w < 6 ? 'border-r-4 border-slate-300' : 'border-r border-slate-200';
-                                    document.write(`<th colspan="8" class="sticky-header px-4 py-2 border-b ${borderClass} text-center font-semibold text-slate-600 bg-slate-50 shadow-sm">
-                                        <div class="flex items-center justify-center space-x-2">
-                                            <span>Semaine ${startWeek + w - 1}</span>
-                                            <button onclick="optimizeWeek(${w - 1})" class="p-1 text-brand-600 hover:bg-brand-100 rounded-md transition-colors" title="Recalculer uniquement cette semaine">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                                            </button>
-                                        </div>
-                                    </th>`);
-                                }
-                            </script>
                         </tr>
                         <!-- Ligne des Jours -->
-                        <tr class="text-xs text-slate-400 bg-white">
+                        <tr id="header-days-row" class="text-xs text-slate-400 bg-white">
                             <th class="sticky-col p-2 border-b border-slate-200 shadow-sm bg-white"></th>
-                            <script>
-                                const _cycleStart = new Date(2026, 5, 15);
-                                const _today = new Date();
-                                _today.setHours(0, 0, 0, 0);
-                                const _diffDays = Math.round((_today.getTime() - _cycleStart.getTime()) / (1000 * 60 * 60 * 24));
-                                window.todayGlobalIndex = _diffDays;
-
-                                const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-                                for (let w = 1; w <= 6; w++) {
-                                    let borderClassWeek = w < 6 ? 'border-r border-slate-200' : 'border-r border-slate-200';
-                                    document.write(`<th class="px-2 py-2 border-b ${borderClassWeek} bg-slate-50 text-slate-400 font-medium text-center min-w-[40px] text-xs">Agt</th>`);
-                                    days.forEach((day, index) => {
-                                        let globalIdx = (w - 1) * 7 + index;
-                                        let isToday = (globalIdx === window.todayGlobalIndex);
-                                        let isWeekend = (index === 5 || index === 6);
-
-                                        let bgClass = isToday ? 'bg-brand-50' : (isWeekend ? 'bg-slate-50' : 'bg-white');
-                                        let textClass = isToday ? 'text-brand-700 font-bold' : (isWeekend ? 'text-slate-500 font-medium' : 'text-slate-400');
-
-                                        let borderClass = 'border-r border-slate-100';
-                                        if (index === 6) {
-                                            borderClass = w < 6 ? 'border-r-4 border-slate-300' : 'border-r border-slate-200';
-                                        }
-                                        if (isToday) {
-                                            borderClass += ' border-l border-brand-200';
-                                            if (index !== 6) borderClass += ' border-r-brand-200';
-                                        }
-
-                                        let displayDay = isToday ? `Auj.` : day;
-                                        document.write(`<th class="px-3 py-2 border-b ${borderClass} ${bgClass} ${textClass} text-center min-w-[80px]">${displayDay}</th>`);
-                                    });
-                                }
-                            </script>
                         </tr>
                     </thead>
                     <tbody id="planning-body" class="text-sm">
@@ -417,12 +438,132 @@
                     </tfoot>
                 </table>
             </div>
+
         </div>
+
     </main>
 
     <!-- Script de l'application -->
     <script>
-        const agents = ['RICARDO', 'FLORIAN', 'CAMILO', 'GUILLAUME', 'JP', 'MARIOLA', 'ROBIN'];
+        let agents = [];
+        window.numWeeks = 6;
+        window.numDays = 42;
+        
+        // State variables
+        window.holidayIndices = JSON.parse(localStorage.getItem('planning_holidays') || '[]');
+        window.astreinteDays = JSON.parse(localStorage.getItem('planning_astreintes') || '{}');
+        window.globalRules = {};
+        window.isPublished = localStorage.getItem('planning_is_published') === 'true';
+
+        function updatePublishUI() {
+            const btnOptimize = document.getElementById('btn-optimize');
+            const btnPublish = document.getElementById('btn-publish');
+            const btnPublishText = document.getElementById('btn-publish-text');
+            const headerAlert = document.getElementById('published-banner');
+            const savedPlanningExists = localStorage.getItem('planning_last_result');
+            
+            if (savedPlanningExists) {
+                btnPublish.classList.remove('hidden');
+            } else {
+                btnPublish.classList.add('hidden');
+            }
+            
+            if (window.isPublished) {
+                btnOptimize.disabled = true;
+                btnOptimize.classList.add('opacity-50', 'cursor-not-allowed');
+                btnPublishText.innerText = "Repasser en Brouillon";
+                btnPublish.classList.add('bg-slate-100');
+                if (headerAlert) headerAlert.classList.remove('hidden');
+            } else {
+                btnOptimize.disabled = false;
+                btnOptimize.classList.remove('opacity-50', 'cursor-not-allowed');
+                btnPublishText.innerText = "Publier le planning";
+                btnPublish.classList.remove('bg-slate-100');
+                if (headerAlert) headerAlert.classList.add('hidden');
+            }
+        }
+
+        window.togglePublishState = function() {
+            window.isPublished = !window.isPublished;
+            localStorage.setItem('planning_is_published', window.isPublished ? 'true' : 'false');
+            updatePublishUI();
+        };
+
+        // Date de début du cycle (Semaine 25 -> 15 Juin 2026)
+        const cycleStartDate = new Date(2026, 5, 15);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const msDiff = today.getTime() - cycleStartDate.getTime();
+        window.todayGlobalIndex = Math.floor(msDiff / (24 * 60 * 60 * 1000));
+
+        function renderHeaders(numWeeks, numDays) {
+            const weeksRow = document.getElementById('header-weeks-row');
+            const daysRow = document.getElementById('header-days-row');
+            
+            // Clear existing headers except the first Agent column
+            while (weeksRow.children.length > 1) {
+                weeksRow.removeChild(weeksRow.lastChild);
+            }
+            while (daysRow.children.length > 1) {
+                daysRow.removeChild(daysRow.lastChild);
+            }
+
+            const startWeek = 25;
+            for (let w = 1; w <= numWeeks; w++) {
+                let borderClass = w < numWeeks ? 'border-r-4 border-slate-300' : 'border-r border-slate-200';
+                let isWeekFinished = ((w - 1) * 7 + 6 < window.todayGlobalIndex);
+                let archiveClass = isWeekFinished ? 'archived-week' : '';
+                
+                const thWeek = document.createElement('th');
+                thWeek.colSpan = 8;
+                thWeek.className = `sticky-header px-4 py-2 border-b ${borderClass} ${archiveClass} text-center font-semibold text-slate-600 bg-slate-50 shadow-sm`;
+                thWeek.innerHTML = `
+                    <div class="flex items-center justify-center space-x-2">
+                        <span>Semaine ${startWeek + w - 1}</span>
+                        <button onclick="optimizeWeek(${w - 1})" class="p-1 text-brand-600 hover:bg-brand-100 rounded-md transition-colors" title="Recalculer uniquement cette semaine">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        </button>
+                    </div>
+                `;
+                weeksRow.appendChild(thWeek);
+            }
+
+            const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+            for (let w = 1; w <= numWeeks; w++) {
+                let isWeekFinished = ((w - 1) * 7 + 6 < window.todayGlobalIndex);
+                let archiveClass = isWeekFinished ? 'archived-week' : '';
+                let borderClassWeek = w < numWeeks ? 'border-r border-slate-200' : 'border-r border-slate-200';
+                
+                const thAgt = document.createElement('th');
+                thAgt.className = `px-2 py-2 border-b ${borderClassWeek} bg-slate-50 text-slate-400 font-medium text-center min-w-[40px] text-xs ${archiveClass}`;
+                thAgt.innerText = 'Agt';
+                daysRow.appendChild(thAgt);
+
+                days.forEach((day, index) => {
+                    let globalIdx = (w - 1) * 7 + index;
+                    let isToday = (globalIdx === window.todayGlobalIndex);
+                    let isPast = (globalIdx < window.todayGlobalIndex);
+                    let isWeekend = (index === 5 || index === 6);
+
+                    let bgClass = isToday ? 'bg-brand-100' : (isPast ? 'bg-slate-100/50 text-slate-350 opacity-60' : (isWeekend ? 'bg-slate-50' : 'bg-white'));
+                    let textClass = isToday ? 'text-brand-700 font-bold' : (isPast ? 'text-slate-400' : (isWeekend ? 'text-slate-500 font-medium' : 'text-slate-400'));
+
+                    let borderClass = 'border-r border-slate-100';
+                    if (index === 6) {
+                        borderClass = w < numWeeks ? 'border-r-4 border-slate-300' : 'border-r border-slate-200';
+                    }
+                    if (isToday) {
+                        borderClass = 'border-l-2 border-r-2 border-brand-500';
+                    }
+
+                    let displayDay = isToday ? `Auj.` : day;
+                    const thDay = document.createElement('th');
+                    thDay.className = `px-3 py-2 border-b ${borderClass} ${bgClass} ${textClass} ${archiveClass} text-center min-w-[80px]`;
+                    thDay.innerText = displayDay;
+                    daysRow.appendChild(thDay);
+                });
+            }
+        }
         const shifts = {
             'Matin': '<span class="badge badge-matin">Matin<span class="text-[9px] font-normal opacity-80 mt-0.5 tracking-tight">07h00 - 15h00</span></span>',
             'Senior': '<span class="badge badge-journee">Journée<span class="text-[9px] font-normal opacity-80 mt-0.5 tracking-tight">09h00 - 17h00</span></span>',
@@ -431,15 +572,196 @@
             'Soir': '<span class="badge badge-soir">Soir<span class="text-[9px] font-normal opacity-80 mt-0.5 tracking-tight">15h00 - 23h00</span></span>',
             'Soir_Dim': '<span class="badge badge-soir">Soir Dim<span class="text-[9px] font-normal opacity-80 mt-0.5 tracking-tight">13h00 - 21h00</span></span>',
             'REPOS': '<span class="badge badge-repos">REPOS</span>',
-            'ABSENT': '<span class="badge badge-absent">ABSENT</span>'
+            'ABSENT': '<span class="badge badge-absent">ABSENT</span>',
+            'ABSENT_CP': '<span class="badge badge-absent">ABSENT (CP)</span>',
+            'ABSENT_RTT': '<span class="badge badge-absent">ABSENT (RTT)</span>',
+            'ABSENT_MALADIE': '<span class="badge badge-absent" style="background-color: #fee2e2; color: #991b1b; border-color: #fca5a5;">MALADIE</span>',
+            'ABSENT_FORMATION': '<span class="badge badge-absent" style="background-color: #e0e7ff; color: #3730a3; border-color: #a5b4fc;">FORMATION</span>'
         };
 
         const tbody = document.getElementById('planning-body');
         const alertRow = document.getElementById('alert-row');
         let absencesData = [];
 
-        // Date de début du cycle (Semaine 25 -> 15 Juin 2026)
-        const cycleStartDate = new Date(2026, 5, 15);
+        // Gestion de l'historique et du diff
+        window.beforeOptimizeGrid = null;
+        window.showDiffMode = true;
+
+        function getCompactBadge(shiftType, type) {
+            if (shiftType === 'REPOS') {
+                if (type === 'del') return '<span class="text-[9px] text-red-600 line-through font-semibold bg-red-50 border border-red-150 px-1 rounded shadow-xs">- REPOS</span>';
+                return '<span class="text-[9px] text-green-600 font-semibold bg-green-50 border border-green-150 px-1 rounded shadow-xs">+ REPOS</span>';
+            }
+            if (shiftType && shiftType.startsWith('ABSENT')) {
+                const label = shiftType === 'ABSENT' ? 'ABSENT' : shiftType.replace('ABSENT_', '');
+                if (type === 'del') return `<span class="text-[9px] text-red-600 line-through font-semibold bg-red-50 border border-red-150 px-1 rounded shadow-xs">- ${label}</span>`;
+                return `<span class="text-[9px] text-orange-600 font-semibold bg-orange-50 border border-orange-150 px-1 rounded shadow-xs">+ ${label}</span>`;
+            }
+            
+            const colors = {
+                'Matin': type === 'del' ? 'bg-red-50 text-red-600 border-red-150 line-through' : 'bg-blue-50 text-blue-700 border-blue-200',
+                'Senior': type === 'del' ? 'bg-red-50 text-red-600 border-red-150 line-through' : 'bg-teal-50 text-teal-700 border-teal-200',
+                'J1': type === 'del' ? 'bg-red-50 text-red-600 border-red-150 line-through' : 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                'J2': type === 'del' ? 'bg-red-50 text-red-600 border-red-150 line-through' : 'bg-green-50 text-green-700 border-green-200',
+                'Soir': type === 'del' ? 'bg-red-50 text-red-600 border-red-150 line-through' : 'bg-slate-700 text-slate-100 border-slate-800',
+                'Soir_Dim': type === 'del' ? 'bg-red-50 text-red-600 border-red-150 line-through' : 'bg-slate-700 text-slate-100 border-slate-800',
+            };
+            
+            const cls = colors[shiftType] || (type === 'del' ? 'bg-red-50 text-red-600 border-red-150 line-through' : 'bg-slate-50 text-slate-700 border-slate-200');
+            const prefix = type === 'del' ? '-' : '+';
+            return `<span class="text-[9px] px-1 rounded border font-semibold ${cls} shadow-xs">${prefix} ${shiftType}</span>`;
+        }
+
+        window.saveCurrentGridForDiff = function() {
+            const currentSaved = localStorage.getItem('planning_last_result');
+            if (currentSaved) {
+                localStorage.setItem('planning_before_optimize', currentSaved);
+                try {
+                    const data = JSON.parse(currentSaved);
+                    window.beforeOptimizeGrid = data.grid || null;
+                } catch(e) {
+                    window.beforeOptimizeGrid = null;
+                }
+            } else {
+                localStorage.removeItem('planning_before_optimize');
+                window.beforeOptimizeGrid = null;
+            }
+        };
+
+        window.computeAndDisplayDiff = function(currentGrid) {
+            const diffPanel = document.getElementById('diff-panel-section');
+            const listEl = document.getElementById('diff-changes-list');
+            const countEl = document.getElementById('diff-changes-count');
+            
+            if (!diffPanel || !listEl || !countEl) return;
+            
+            if (!window.beforeOptimizeGrid || !currentGrid) {
+                diffPanel.classList.add('hidden');
+                return;
+            }
+            
+            const changes = [];
+            const dayMapToCycle = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+            
+            agents.forEach(agent => {
+                const oldSeq = window.beforeOptimizeGrid[agent] || [];
+                const newSeq = currentGrid[agent] || [];
+                
+                for (let i = 0; i < window.numDays; i++) {
+                    const oldS = oldSeq[i] || 'REPOS';
+                    const newS = newSeq[i] || 'REPOS';
+                    if (oldS !== newS) {
+                        const weekNum = Math.floor(i / 7) + 1;
+                        const realWeek = 24 + weekNum;
+                        
+                        let d = new Date(cycleStartDate);
+                        d.setDate(d.getDate() + i);
+                        const dayName = dayMapToCycle[d.getDay()];
+                        const dateStr = `${d.getDate()}/${d.getMonth() + 1}`;
+                        
+                        changes.push({
+                            agent: agent,
+                            dayIndex: i,
+                            week: realWeek,
+                            dayName: dayName,
+                            dateStr: dateStr,
+                            oldShift: oldS,
+                            newShift: newS
+                        });
+                    }
+                }
+            });
+            
+            if (changes.length > 0) {
+                diffPanel.classList.remove('hidden');
+                countEl.innerText = changes.length;
+                listEl.innerHTML = '';
+                
+                changes.forEach(change => {
+                    const li = document.createElement('li');
+                    li.className = "flex flex-col p-1.5 bg-white border border-slate-150 rounded shadow-xs mb-1";
+                    li.innerHTML = `
+                        <div class="flex justify-between items-center text-[10px] text-slate-500 font-semibold">
+                            <span>S${change.week} — ${change.dayName} ${change.dateStr}</span>
+                            <span class="text-brand-600 font-bold">${change.agent}</span>
+                        </div>
+                        <div class="flex items-center space-x-1.5 mt-1 font-semibold">
+                            <span class="text-red-600 line-through bg-red-50 border border-red-100 px-1 rounded text-[9px]">${change.oldShift}</span>
+                            <span class="text-slate-400">➔</span>
+                            <span class="text-green-600 bg-green-50 border border-green-100 px-1 rounded text-[9px]">${change.newShift}</span>
+                        </div>
+                    `;
+                    listEl.appendChild(li);
+                });
+                
+                const toggleCheckbox = document.getElementById('toggle-diff-mode');
+                if (toggleCheckbox) {
+                    toggleCheckbox.checked = window.showDiffMode;
+                }
+            } else {
+                diffPanel.classList.add('hidden');
+            }
+        };
+
+        window.toggleDiffMode = function(checked) {
+            window.showDiffMode = checked;
+            localStorage.setItem('planning_show_diff', checked ? 'true' : 'false');
+            
+            const savedPlanning = localStorage.getItem('planning_last_result');
+            if (savedPlanning) {
+                try {
+                    const data = JSON.parse(savedPlanning);
+                    displayPlanningData(data);
+                } catch(e) {}
+            }
+        };
+
+        window.toggleArchiveMode = function(checked) {
+            const gridContainer = document.getElementById('grid-container');
+            if (gridContainer) {
+                if (checked) {
+                    gridContainer.classList.add('hide-archived');
+                } else {
+                    gridContainer.classList.remove('hide-archived');
+                }
+            }
+            localStorage.setItem('planning_hide_archived', checked ? 'true' : 'false');
+        };
+
+        window.restorePreviousGrid = function() {
+            const savedBefore = localStorage.getItem('planning_before_optimize');
+            if (savedBefore) {
+                localStorage.setItem('planning_last_result', savedBefore);
+                localStorage.removeItem('planning_before_optimize');
+                window.beforeOptimizeGrid = null;
+                
+                try {
+                    const data = JSON.parse(savedBefore);
+                    displayPlanningData(data);
+                } catch(e) {}
+                
+                const diffPanel = document.getElementById('diff-panel-section');
+                if (diffPanel) diffPanel.classList.add('hidden');
+            }
+        };
+
+        window.acceptNewGrid = function() {
+            localStorage.removeItem('planning_before_optimize');
+            window.beforeOptimizeGrid = null;
+            
+            const savedPlanning = localStorage.getItem('planning_last_result');
+            if (savedPlanning) {
+                try {
+                    const data = JSON.parse(savedPlanning);
+                    displayPlanningData(data);
+                } catch(e) {}
+            }
+            
+            const diffPanel = document.getElementById('diff-panel-section');
+            if (diffPanel) diffPanel.classList.add('hidden');
+        };
+
+        // Date de début du cycle (Semaine 25 -> 15 Juin 2026) (Déjà initialisé plus haut)
         const cycleEndDate = new Date(2026, 6, 26); // 42 jours plus tard
 
         // Initialisation Flatpickr
@@ -457,7 +779,52 @@
         }
 
         // Chargement initial depuis le localStorage
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Récupérer les règles config
+            try {
+                const response = await fetch('/api/rules');
+                if (response.ok) {
+                    const rules = await response.json();
+                    window.globalRules = rules;
+                    if (rules.nb_semaines) {
+                        window.numWeeks = rules.nb_semaines;
+                        window.numDays = window.numWeeks * 7;
+                    }
+                    if (rules.agents) {
+                        agents = rules.agents;
+                        const agentSelect = document.getElementById('agent-select');
+                        if (agentSelect) {
+                            agentSelect.innerHTML = '';
+                            agents.forEach(a => {
+                                const opt = document.createElement('option');
+                                opt.value = a;
+                                opt.innerText = a === 'RICARDO' ? 'RICARDO (Senior)' : a;
+                                agentSelect.appendChild(opt);
+                            });
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Erreur chargement des regles:", e);
+            }
+
+            // Mettre à jour la description du cycle
+            const cycleDesc = document.getElementById('cycle-description');
+            if (cycleDesc) {
+                cycleDesc.innerText = `Cycle de ${window.numWeeks} semaines (${window.numDays} jours)`;
+            }
+
+            // Ajuster Flatpickr range
+            const cycleEndDate = new Date(cycleStartDate);
+            cycleEndDate.setDate(cycleEndDate.getDate() + window.numDays - 1);
+            if (typeof fp !== 'undefined') {
+                fp.set('maxDate', cycleEndDate);
+            }
+
+            // Construire les en-têtes
+            renderHeaders(window.numWeeks, window.numDays);
+
+            updatePublishUI();
 
             // Charger les absences
             const savedAbsences = localStorage.getItem('planning_absences');
@@ -471,6 +838,41 @@
                 } catch (e) {
                     console.error('Erreur parsing absences', e);
                     absencesData = [];
+                }
+            }
+
+            // Charger l'état du diff et de la grille précédente
+            const savedBefore = localStorage.getItem('planning_before_optimize');
+            if (savedBefore) {
+                try {
+                    const data = JSON.parse(savedBefore);
+                    window.beforeOptimizeGrid = data.grid || null;
+                } catch(e) {
+                    window.beforeOptimizeGrid = null;
+                }
+            }
+            const savedShowDiff = localStorage.getItem('planning_show_diff');
+            if (savedShowDiff !== null) {
+                window.showDiffMode = savedShowDiff === 'true';
+            }
+            const toggleCheckbox = document.getElementById('toggle-diff-mode');
+            if (toggleCheckbox) {
+                toggleCheckbox.checked = window.showDiffMode;
+            }
+
+            // Charger l'état de l'archivage des semaines passées
+            const savedHideArchived = localStorage.getItem('planning_hide_archived');
+            const hideArchived = savedHideArchived === null ? true : (savedHideArchived === 'true');
+            const toggleArchive = document.getElementById('toggle-archive');
+            if (toggleArchive) {
+                toggleArchive.checked = hideArchived;
+            }
+            const gridContainer = document.getElementById('grid-container');
+            if (gridContainer) {
+                if (hideArchived) {
+                    gridContainer.classList.add('hide-archived');
+                } else {
+                    gridContainer.classList.remove('hide-archived');
                 }
             }
 
@@ -500,10 +902,17 @@
                 displayString = `S${24 + parseInt(absenceGroup.week)} ${absenceGroup.dayStr}`;
             }
 
+            let absenceTypeStr = "";
+            if (absenceGroup.items && absenceGroup.items.length > 0) {
+                 absenceTypeStr = absenceGroup.items[0].type ? absenceGroup.items[0].type.replace("ABSENT_", "") : "AUTRE";
+            }
+            if (absenceTypeStr === "ABSENT") absenceTypeStr = "AUTRE";
+
             li.innerHTML = `
                 <div class="flex items-center space-x-2">
                     <span class="w-2 h-2 rounded-full bg-orange-400"></span>
                     <span class="font-medium text-slate-700">${absenceGroup.agent}</span>
+                    <span class="text-xs font-bold text-orange-600 px-1">[${absenceTypeStr}]</span>
                     <span class="text-slate-400 text-xs px-1">—</span>
                     <span class="text-slate-600">${displayString}</span>
                 </div>
@@ -817,8 +1226,12 @@
 
                 let seq = grid[agent] || [];
 
-                // Générer les 42 cellules
-                for (let i = 0; i < 42; i++) {
+                // Générer les cellules
+                for (let i = 0; i < window.numDays; i++) {
+                    const wIndex = Math.floor(i / 7);
+                    const isWeekFinished = (wIndex * 7 + 6 < window.todayGlobalIndex);
+                    const archiveClass = isWeekFinished ? 'archived-week' : '';
+
                     if (i % 7 === 0) {
                         let isWeekLocked = true;
                         for (let d = 0; d < 7; d++) {
@@ -829,7 +1242,7 @@
                         }
 
                         let tdAgentWeek = document.createElement('td');
-                        tdAgentWeek.className = "alert-cell p-1 border-r border-slate-200 bg-slate-50/50 text-slate-500 font-medium text-[10px] text-center align-middle cursor-pointer hover:bg-slate-100 transition-colors group";
+                        tdAgentWeek.className = `alert-cell p-1 border-r border-slate-200 bg-slate-50/50 text-slate-500 font-medium text-[10px] text-center align-middle cursor-pointer hover:bg-slate-100 transition-colors group ${archiveClass}`;
 
                         let lockColor = isWeekLocked ? 'text-red-500' : 'text-slate-300 group-hover:text-slate-400';
                         tdAgentWeek.innerHTML = `
@@ -848,34 +1261,73 @@
                     let isSunday = (i % 7 === 6);
                     let hasPenalty = daysWithPenalties.has(i);
                     let isToday = (i === window.todayGlobalIndex);
+                    let isPast = (i < window.todayGlobalIndex);
 
                     let borderClass = 'border-r border-slate-100';
                     if (isSunday) {
-                        borderClass = i < 41 ? 'border-r-4 border-slate-300' : 'border-r border-slate-200';
+                        borderClass = i < window.numDays - 1 ? 'border-r-4 border-slate-300' : 'border-r border-slate-200';
                     }
                     if (isToday) {
-                        borderClass += ' border-l border-brand-200';
-                        if (!isSunday) borderClass += ' border-r-brand-200';
+                        borderClass = 'border-l-2 border-r-2 border-brand-500';
+                    }
+
+                    let shiftType = seq[i] || 'REPOS';
+                    let isLocked = window.lockedShifts && window.lockedShifts[agent] && window.lockedShifts[agent][i];
+
+                    let isDiff = false;
+                    let oldShiftType = null;
+                    if (window.beforeOptimizeGrid && window.beforeOptimizeGrid[agent] && window.beforeOptimizeGrid[agent][i] !== undefined) {
+                        oldShiftType = window.beforeOptimizeGrid[agent][i];
+                        if (oldShiftType !== shiftType) {
+                            isDiff = true;
+                        }
                     }
 
                     let bgClass = isSunday ? 'bg-slate-50/50' : '';
                     if (isToday) bgClass = 'bg-brand-50/30';
                     if (hasPenalty) bgClass += ' bg-red-50/30';
+                    if (isDiff && window.showDiffMode) {
+                        bgClass += ' ring-2 ring-yellow-400 bg-yellow-50/20';
+                    }
 
-                    td.className = `p-2 ${borderClass} ${bgClass} text-center transition-colors relative cursor-pointer hover:bg-slate-100 hover:brightness-95 select-none`;
+                    let opacityClass = '';
+                    if (isPast) {
+                        bgClass += ' bg-slate-100/75';
+                        opacityClass = ' opacity-40 filter grayscale';
+                    }
+
+                    td.className = `p-2 ${borderClass} ${bgClass} ${opacityClass} ${archiveClass} text-center transition-colors relative cursor-pointer hover:bg-slate-100 hover:brightness-95 select-none`;
                     td.draggable = true;
 
-                    let shiftType = seq[i] || 'REPOS';
                     let badgeHtml = shifts[shiftType] || shiftType;
-                    let isLocked = window.lockedShifts && window.lockedShifts[agent] && window.lockedShifts[agent][i];
+                    if (isDiff && window.showDiffMode) {
+                        badgeHtml = `
+                            <div class="flex flex-col items-center justify-center space-y-1 p-1 bg-yellow-50/50 border border-yellow-200 rounded shadow-xs">
+                                ${getCompactBadge(oldShiftType, 'del')}
+                                ${getCompactBadge(shiftType, 'ins')}
+                            </div>
+                        `;
+                    }
 
                     td.innerHTML = badgeHtml;
                     if (isLocked) {
                         td.innerHTML += `<div class="absolute bottom-0 right-0 p-0.5 pointer-events-none"><svg class="w-2.5 h-2.5 text-red-500 drop-shadow-sm" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg></div>`;
                     }
 
+                    // Astreinte indicator
+                    const isAst = window.astreinteDays[agent] && window.astreinteDays[agent][i];
+                    if (isAst) {
+                        td.innerHTML += `<div class="absolute top-0 right-0 p-0.5 pointer-events-none z-10"><span class="bg-purple-600 text-white rounded-[3px] text-[8px] font-bold px-1 py-0.5 leading-none shadow-sm">AST</span></div>`;
+                    }
+
                     td.onclick = (e) => {
-                        toggleAbsence(agent, i);
+                        if (e.shiftKey) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleAstreinte(agent, i);
+                        } else {
+                            toggleAbsence(agent, i);
+                        }
                     };
                     td.oncontextmenu = (e) => {
                         e.preventDefault();
@@ -930,30 +1382,36 @@
             });
 
             // Générer les alertes
-            for (let i = 0; i < 42; i++) {
+            for (let i = 0; i < window.numDays; i++) {
+                const wIndex = Math.floor(i / 7);
+                const isWeekFinished = (wIndex * 7 + 6 < window.todayGlobalIndex);
+                const archiveClass = isWeekFinished ? 'archived-week' : '';
+
                 if (i % 7 === 0) {
                     let tdAgt = document.createElement('td');
-                    tdAgt.className = "alert-cell p-2 border-r border-slate-200 bg-red-50 border-t border-slate-200";
+                    tdAgt.className = `alert-cell p-2 border-r border-slate-200 bg-red-50 border-t border-slate-200 ${archiveClass}`;
                     alertRow.appendChild(tdAgt);
                 }
                 let td = document.createElement('td');
                 let isSunday = (i % 7 === 6);
                 let hasPenalty = daysWithPenalties.has(i);
                 let isToday = (i === window.todayGlobalIndex);
+                let isPast = (i < window.todayGlobalIndex);
 
                 let borderClass = 'border-r border-slate-100';
                 if (isSunday) {
-                    borderClass = i < 41 ? 'border-r-4 border-slate-300' : 'border-r border-slate-200';
+                    borderClass = i < window.numDays - 1 ? 'border-r-4 border-slate-300' : 'border-r border-slate-200';
                 }
                 if (isToday) {
-                    borderClass += ' border-l border-brand-200';
-                    if (!isSunday) borderClass += ' border-r-brand-200';
+                    borderClass = 'border-l-2 border-r-2 border-brand-500';
                 }
 
                 let bgClass = isToday ? 'bg-brand-50/30' : '';
                 if (hasPenalty) bgClass += ' bg-red-50';
 
-                td.className = `p-2 ${borderClass} ${bgClass} text-center alert-cell border-t border-slate-200`;
+                let opacityClass = isPast ? 'opacity-40 filter grayscale' : '';
+
+                td.className = `p-2 ${borderClass} ${bgClass} ${opacityClass} ${archiveClass} text-center alert-cell border-t border-slate-200`;
 
                 if (alerts && alerts[i]) {
                     td.innerHTML = `<span class="text-xs font-bold text-red-600 bg-white px-2 py-1 rounded border border-red-200 shadow-sm inline-flex items-center"><span class="w-2 h-2 rounded-full bg-red-500 mr-1 animate-pulse"></span>${alerts[i]}</span>`;
@@ -977,6 +1435,9 @@
 
         function displayPlanningData(data) {
             renderTable(data.grid, data.alerts, data.penalties_details);
+            if (typeof computeAndDisplayDiff === 'function') {
+                computeAndDisplayDiff(data.grid);
+            }
 
             const auditPanel = document.getElementById('audit-panel');
             if (auditPanel) {
@@ -1007,9 +1468,54 @@
             }
         }
 
+
+        // Holiday toggle function
+        window.toggleHoliday = function(dayIndex) {
+            const idx = window.holidayIndices.indexOf(dayIndex);
+            if (idx === -1) {
+                window.holidayIndices.push(dayIndex);
+            } else {
+                window.holidayIndices.splice(idx, 1);
+            }
+            localStorage.setItem('planning_holidays', JSON.stringify(window.holidayIndices));
+            
+            // Re-render headers and table to update styles and stats
+            renderHeaders(window.numWeeks, window.numDays);
+            const savedPlanning = localStorage.getItem('planning_last_result');
+            if (savedPlanning) {
+                try {
+                    const data = JSON.parse(savedPlanning);
+                    if (data && data.grid) displayPlanningData(data);
+                } catch(e) {}
+            }
+        };
+
+        // Astreinte toggle function (Shift+Click on cell)
+        window.toggleAstreinte = function(agent, dayIndex) {
+            if (!window.astreinteDays[agent]) {
+                window.astreinteDays[agent] = {};
+            }
+            if (window.astreinteDays[agent][dayIndex]) {
+                delete window.astreinteDays[agent][dayIndex];
+            } else {
+                window.astreinteDays[agent][dayIndex] = true;
+            }
+            localStorage.setItem('planning_astreintes', JSON.stringify(window.astreinteDays));
+            
+            // Re-render table to display the badge and update stats
+            const savedPlanning = localStorage.getItem('planning_last_result');
+            if (savedPlanning) {
+                try {
+                    const data = JSON.parse(savedPlanning);
+                    if (data && data.grid) displayPlanningData(data);
+                } catch(e) {}
+            }
+        };
+
         // Action : Ajouter Indisponibilité
         document.getElementById('btn-add-absence').addEventListener('click', () => {
             const agent = document.getElementById('agent-select').value;
+            const absenceType = document.getElementById('absence-type').value;
             const selectedDates = fp.selectedDates;
 
             if (!selectedDates || selectedDates.length === 0) {
@@ -1041,7 +1547,7 @@
                 const diffTime = currentDate.getTime() - cycleStartDate.getTime();
                 const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-                if (diffDays >= 0 && diffDays < 42) {
+                if (diffDays >= 0 && diffDays < window.numDays) {
                     const week = Math.floor(diffDays / 7) + 1;
                     let jsDay = currentDate.getDay(); // 0 (Sun) to 6 (Sat)
                     let dayStr = dayMapToCycle[jsDay];
@@ -1050,7 +1556,8 @@
                         agent: agent,
                         week: week,
                         dayStr: dayStr,
-                        dayIndex: diffDays
+                        dayIndex: diffDays,
+                        type: absenceType
                     });
                 }
                 currentDate.setDate(currentDate.getDate() + 1);
@@ -1067,7 +1574,7 @@
                 renderAbsenceItem(newGroup, absencesData.length - 1);
                 fp.clear(); // Réinitialiser le calendrier après ajout
             } else {
-                alert("Les dates sélectionnées sont en dehors du cycle de 42 jours.");
+                alert("Les dates sélectionnées sont en dehors du cycle de " + window.numDays + " jours.");
             }
         });
 
@@ -1078,7 +1585,48 @@
             document.getElementById('absence-list').innerHTML = '';
         });
 
+        function getEffectiveLockedShifts() {
+            // Copy existing locks
+            const effectiveLocks = {};
+            agents.forEach(agent => {
+                effectiveLocks[agent] = {};
+                if (window.lockedShifts && window.lockedShifts[agent]) {
+                    Object.assign(effectiveLocks[agent], window.lockedShifts[agent]);
+                }
+            });
+
+            // Find completed weeks and lock their shifts
+            const savedPlanning = localStorage.getItem('planning_last_result');
+            if (savedPlanning) {
+                try {
+                    const data = JSON.parse(savedPlanning);
+                    if (data && data.grid) {
+                        for (let w = 1; w <= window.numWeeks; w++) {
+                            const isWeekFinished = ((w - 1) * 7 + 6 < window.todayGlobalIndex);
+                            if (isWeekFinished) {
+                                for (let d = 0; d < 7; d++) {
+                                    const dayIdx = (w - 1) * 7 + d;
+                                    agents.forEach(agent => {
+                                        if (data.grid[agent] && data.grid[agent][dayIdx] !== undefined) {
+                                            effectiveLocks[agent][dayIdx] = data.grid[agent][dayIdx];
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error parsing planning for archiving locks:", e);
+                }
+            }
+            return effectiveLocks;
+        }
+
         window.optimizeWeek = async function (targetWeek) {
+            if (typeof saveCurrentGridForDiff === 'function') {
+                saveCurrentGridForDiff();
+            }
+
             const btn = document.getElementById('btn-optimize');
             const spinner = document.getElementById('spinner');
             const btnText = document.getElementById('btn-text');
@@ -1133,7 +1681,7 @@
                         rules: rules,
                         target_week: targetWeek,
                         previous_grid: previousGrid,
-                        locked_shifts: window.lockedShifts || {}
+                        locked_shifts: getEffectiveLockedShifts()
                     })
                 });
 
@@ -1167,6 +1715,15 @@
 
         // Action : Lancer l'optimisation
         document.getElementById('btn-optimize').addEventListener('click', async function () {
+            if (window.isPublished) {
+                alert("Le planning est publié. Repassez en mode brouillon pour l'optimiser.");
+                return;
+            }
+
+            if (typeof saveCurrentGridForDiff === 'function') {
+                saveCurrentGridForDiff();
+            }
+
             const btn = this;
             const spinner = document.getElementById('spinner');
             const btnText = document.getElementById('btn-text');
@@ -1201,7 +1758,7 @@
                     body: JSON.stringify({
                         absences: flatAbsences,
                         rules: rules,
-                        locked_shifts: window.lockedShifts || {}
+                        locked_shifts: getEffectiveLockedShifts()
                     })
                 });
 

@@ -25,7 +25,11 @@ def generer_planning(indisponibilites, rules, target_week=None, previous_grid=No
         "poids_stabilite": 100,
         "poids_priorite": 5,
         "poids_ricardo_deviation": 4000,
-        "max_jours_travail_semaine": 5
+        "max_jours_travail_semaine": 5,
+        "repos_11h_impose": True,
+        "composition_stricte_weekend": True,
+        "contraintes_senior_active": True,
+        "agents": ['RICARDO', 'FLORIAN', 'CAMILO', 'GUILLAUME', 'JP', 'MARIOLA', 'ROBIN']
     }
     try:
         regles_path = os.path.join(os.path.dirname(__file__), 'regles.json')
@@ -38,11 +42,11 @@ def generer_planning(indisponibilites, rules, target_week=None, previous_grid=No
     # ==========================================
     # 1. DONNÉES ET CONFIGURATION
     # ==========================================
-    agents = ['RICARDO', 'FLORIAN', 'CAMILO', 'GUILLAUME', 'JP', 'MARIOLA', 'ROBIN']
-    tournants = agents[1:]
+    agents = regles_stricte.get("agents", ['RICARDO', 'FLORIAN', 'CAMILO', 'GUILLAUME', 'JP', 'MARIOLA', 'ROBIN'])
+    tournants = [a for a in agents if a != 'RICARDO']
     
-    num_days = 42  # Cycle de 6 semaines
-    num_weeks = 6
+    num_weeks = regles_stricte.get("nb_semaines", 6)
+    num_days = num_weeks * 7
     
     # Définition des types de shifts
     SHIFTS_NOMS = ['REPOS', 'Matin', 'J1', 'J2', 'Soir', 'Soir_Dim', 'Senior']
@@ -85,7 +89,7 @@ def generer_planning(indisponibilites, rules, target_week=None, previous_grid=No
                 
     # --- C4 : Contraintes pour RICARDO (Senior) ---
     ricardo_penalties = []
-    if True: # Toujours actif
+    if regles_stricte.get("contraintes_senior_active", True):
         for d in range(num_days):
             slack_ricardo = model.NewIntVar(0, 1, f'slack_ricardo_{d}')
             if d % 7 < 5:  # Lundi (0) au Vendredi (4) - Idéal: JS
@@ -111,7 +115,7 @@ def generer_planning(indisponibilites, rules, target_week=None, previous_grid=No
     # --- C2 : Temps de repos minimum de 11 heures ---
     # Interdiction des enchaînements impossibles du jour J au jour J+1
     # Exempt pour le Senior s'il dépanne occasionnellement, on l'applique uniquement aux tournants
-    if rules.get('toggle-repos', True):
+    if rules.get('toggle-repos', True) and regles_stricte.get("repos_11h_impose", True):
         for a in tournants:
             for d in range(num_days - 1):
                 model.AddForbiddenAssignments([shifts[(a, d)], shifts[(a, d+1)]], [
@@ -123,7 +127,7 @@ def generer_planning(indisponibilites, rules, target_week=None, previous_grid=No
     for a in tournants:
         # 1. Limitation : Repos minimum et maximum élastiques (incluant les absences)
         for w in range(num_weeks):
-            abs_count = sum(1 for d in range(7) if (w*7 + d) in indisponibilites.get(a, []))
+            abs_count = sum(1 for d in range(7) if (w*7 + d) in indisponibilites.get(a, {}))
             jours_repos = sum(shift_bool[(a, w*7 + d, SHIFT_R)] for d in range(7))
             
             min_repos = min(7, regles_stricte["repos_semaine_min"] + abs_count)
@@ -220,7 +224,7 @@ def generer_planning(indisponibilites, rules, target_week=None, previous_grid=No
             stability_penalties.append(slack_stabilite)
             
     # --- NOUVELLE C9 : Composition stricte des effectifs le Week-end ---
-    if True: # Composition stricte toujours active
+    if regles_stricte.get("composition_stricte_weekend", True):
         for d in range(num_days):
             if d % 7 == 5: # Samedi
                 slack_sam_matin = model.NewIntVar(0, 1, f'slack_sam_matin_{d}')
@@ -320,7 +324,7 @@ def generer_planning(indisponibilites, rules, target_week=None, previous_grid=No
     # Calcul des jours de présence par agent tournant
     P_a = {}
     for a in tournants:
-        abs_count = sum(1 for d in range(num_days) if d in indisponibilites.get(a, []))
+        abs_count = sum(1 for d in range(num_days) if d in indisponibilites.get(a, {}))
         P_a[a] = num_days - abs_count
     
     P_total = sum(P_a.values()) if sum(P_a.values()) > 0 else 1
@@ -498,11 +502,14 @@ def generer_planning(indisponibilites, rules, target_week=None, previous_grid=No
 
         for a in agents:
             row = []
-            absences = indisponibilites.get(a, [])
+            absences = indisponibilites.get(a, {})
             for d in range(num_days):
                 s = solver.Value(shifts[(a, d)])
                 if d in absences:
-                    row.append("ABSENT")
+                    if isinstance(absences, dict):
+                        row.append(absences[d])
+                    else:
+                        row.append("ABSENT")
                 else:
                     row.append(SHIFTS_NOMS[s])
             result["grid"][a] = row

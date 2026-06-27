@@ -20,5 +20,10 @@
     "poids_stabilite": 100,
     "poids_priorite": 5,
     "poids_ricardo_deviation": 4000,
-    "max_jours_travail_semaine": 5
+    "max_jours_travail_semaine": 5,
+    "repos_11h_impose": true,
+    "composition_stricte_weekend": true,
+    "contraintes_senior_active": true,
+    "nb_semaines": 12,
+    "agents": ["RICARDO", "FLORIAN", "CAMILO", "GUILLAUME", "JP", "MARIOLA", "ROBIN"]
 }
